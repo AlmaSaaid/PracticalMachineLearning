@@ -11,5 +11,6 @@ Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible t
 The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
 The test data are available here:https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 
-The targeted variable is classe i.e. the variable that need to be predicted. It is how participants do the exercise which is categorized into 5 fashions: 
+The targeted variable is classe i.e. the variable that need to be predicted. It is how participants do the exercise which is categorized into 5 fashions i.e. sitting-down, standing-up, standing, walking, and sitting. However, the way they do the exercice is measured and categorized into the following classes:
 Class A: exactly according to the specification, Class B: throwing the elbows to the front, Class C: lifting the dumbbell only halfway, Class D: lowering the dumbbell only halfway and Class E: throwing the hips to the front.
+The Class A corresponds to the right way of doing the exercice but the other four classes indicate common mistakes done during the exercise.  
