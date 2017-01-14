@@ -1,0 +1,136 @@
+---
+title: "Practical Machine Learning"
+author: "F Alma Saaid"
+date: "January 13, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This project is on Predictive Analytics on people personal activity i.e. to predict the manner in which they did the exercise. <http://rmarkdown.rstudio.com>.In this project, the main aim is to predict participants do the exercise  categorized into 5 fashions. Class A: exactly according to the specification, Class B: throwing the elbows to the front, Class C: lifting the dumbbell only halfway, Class D: lowering the dumbbell only halfway and Class E: throwing the hips to the front.
+
+# Background
+
+Weight lifting exercises using devices such as Jawbone Up, Nike FuelBand and Fitbit are among common activity studied in human activity recognition (HAR). According to <http://groupware.les.inf.puc-rio.br/>, this research has traditionally focused on discriminating between different activities, i.e. to predict "which" activity was performed at a specific point in time. They claimed that the "how (well)" investigation has so far received little attention even though it potentially provides useful information for a large variety of applications, for instance in sports training.
+
+It is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information on the data is available from the website: <http://groupware.les.inf.puc-rio.br/har> .
+
+
+# Data and Method
+
+The dataset is divided into 2 sets i.e. training and testing where total records of the former is 19,622 and the latter is only 20.
+
+The predictive analytics is performed is such way:
+
+* Pre-processing involves data cleaning and tidying. 
+* Partitioning the training data into estimation and validation (with 70:30 split ratio).
+* Building the random forest model on the cleaned training dataset.
+* Validating the model by applying to testing dataset.
+
+## Data Pre-processing
+The data provided have to be cleaned and tidied so that the model building process would run smoothly.
+All of the unused data like paricipant profile and null (or almost null) columns are all removed.
+
+```{r echo=FALSE}
+setwd("D:/Users/TM35082/Desktop/New files/Cousera/Module8/Data")
+
+library(caret)
+library(ggplot2)
+library(randomForest)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(RColorBrewer)
+library(e1071)
+library(knitr)
+
+train <- read.csv("pml-training.csv", na.strings=c("NA","#DIV/0!"," "))
+test <- read.csv("pml-testing.csv", na.strings=c("NA","#DIV/0!"," "))
+```
+
+
+```{r}
+# Data partitioning
+
+##remove all variables with NAs
+exclNATrain <- train[, apply(train, 2, function(x) !any(is.na(x)))] 
+dim(exclNATrain)
+
+## remove variables of user information, time and undefined
+cleantrain<-exclNATrain [,-c(1:8)]
+dim(cleantrain)
+
+## 20 test cases provided for the project: Validation data set
+cleantest<-test[,names(cleantrain[,-52])]
+dim(cleantest)
+
+#Consider 70:30 split...
+est.train <- createDataPartition(y=cleantrain$classe, p=0.7, list=FALSE)
+est.build <- cleantrain[est.train, ]
+valid.build <- cleantrain[-est.train, ]
+
+```
+
+# Results and Analysis
+
+This section provides the results of the model run to predict the manner how participants do the exercise. The model used is Random Forest (RF). RF  classifier developed by Breiman (2001) is a combination of decision trees and sample vector of the historical data. When building model on the training dataset, the partitioned data must both be used, separately. It is meant for estimation (which later be used for scoring the testing dataset) and for validation. The out-of-sample have to be applied to check on like the deviations, sensitivity and specificity.
+
+The following R code exhibits the RF model run on training data, the prediction and as well as the confusion matrix.
+
+## Random forest model: Training data
+```{r}
+set.seed(12000)
+
+#run random forest on estimation build data to build model (i.e. est.build dataset)
+fit.ctrl <- trainControl(method="cv", number=5, allowParallel=T, verbose=T)
+fit.rforest <- train(classe~.,data=est.build , method="rf", trControl=fit.ctrl, verbose=F)
+
+#see the RF model results
+fit.rforest
+
+##run random forest on estimation validation data to build model (i.e. valid.build dataset)
+predict.rforest <- predict(fit.rforest, newdata=valid.build)
+confusionMatrix(predict.rforest, valid.build$classe)
+```
+
+The confusion matrix show high sensitivity and specificity (both for all classes are > 0.98) which indicate the model built is accurate and robust. The output of the built model reports on the accuracy of the model as well as the Kappa. The accuracy states how well the model predicted accurately and the kappa shares the same information but it calculates how well a model predicted while taking into account chance or luck. As such, the Kappa should be lower than the accuracy. From the results, the accuracy=0.9932 and Kappa=0.9914, which shows high accuracy. 
+Moreover, the best mtry was number 26. Basically, **mtry** means the number of variables randomly sampled as candidates at each split. Based on the figure If we look closely, it can clearly be seen that mtry 26 has the highest accuracy and Kappa.
+
+Another important part in RF model is variable importance which is telling us how important is the variable contributing to the model. From the output (refer to **rf variable importance**), it provides top 20 most important variables with percentage of how much the accuracy of the model is reduced if the variable is removed. As such, the higher the number the more valuable the variable is in improving the accuracy of the model built.
+
+```{r echo=FALSE}
+#importance(fit.rforest)
+varImp(fit.rforest)
+
+#Plot the model accuracy based on selected mtry
+plot(fit.rforest) 
+
+```
+Figure 1: The Cross validation accuracy
+
+The figure above exhibits the relationship between the number of selected predictors and the resampled estimate in the cross-validation stage. It shows the cross-validation accuracy is the highest with randomly selected 26 variables for building the RF model of the project.
+
+```{r echo=FALSE}
+#plot the importance
+plot(varImp(fit.rforest))
+
+```
+Figure 2: Variable importance 
+
+The following R code exhibits the RF model run on testing dataset.
+
+## Random forest model: Testing data
+```{r}
+##scoring the built random forest model on testing dataset
+score.20 <- predict(fit.rforest, newdata=cleantest)
+
+# diplaying the predicted class of the 20 test dataset given for the project
+score.20
+```
+
+# Conclusion
+The project provides the practical machine learning on predicting the manner in which the participants did the exercise in their personal activity. The training and testing data files, provided for the project, are pre-processed. Using 70:30 partition, the training dataset with randomly 26 variables are used to build the prediction model.Random Forest model is the selected model used for prediction. Based on the results, high accuracy was shown and the model is then applied to testing dataset to predict the 20 dataset with accuracy of over 99%.
